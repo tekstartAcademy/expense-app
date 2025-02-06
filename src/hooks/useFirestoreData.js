@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
 
@@ -6,7 +6,13 @@ export const useFirestoreData = (currentMonth, userId) => {
     const [monthData, setMonthData] = useState({});
   
     useEffect(() => {
-      const unsub = onSnapshot(doc(db, "users", userId, "months", currentMonth), (docSnap) => {
+      // Only set up the listener if a valid userId exists
+      if (!userId) {
+        return; // or you could optionally set monthData to a default value
+      }
+  
+      const docRef = doc(db, "users", userId, "months", currentMonth);
+      const unsub = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
           setMonthData(docSnap.data());
         } else {
@@ -19,3 +25,4 @@ export const useFirestoreData = (currentMonth, userId) => {
   
     return monthData;
   };
+  
