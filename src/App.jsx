@@ -22,10 +22,17 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  IconButton,
+  Menu,
 } from "@mui/material";
-import { ArrowBack, ArrowForward } from "@mui/icons-material";
+import { ArrowBack, ArrowForward, AccountCircle } from "@mui/icons-material";
 import { Pie } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from "chart.js";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip as ChartTooltip,
+  Legend,
+} from "chart.js";
 import "animate.css";
 import IncomeComponent from "./components/IncomeComponent";
 import SavingsComponent from "./components/SavingsComponent";
@@ -82,6 +89,11 @@ const App = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [pendingExpenseChange, setPendingExpenseChange] = useState(false);
 
+  // For the header menu (to hide welcome/logout in a menu)
+  const [anchorEl, setAnchorEl] = useState(null);
+  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
   // Load month history and current month data from Firebase (only when logged in)
   const monthsHistory = useFirestoreMonthsHistory(userId);
   const monthData = useFirestoreData(currentMonth, userId);
@@ -117,6 +129,7 @@ const App = () => {
     } catch (error) {
       setError("Error signing out. Please try again.");
     }
+    handleMenuClose();
   };
 
   // Calculate expense breakdowns
@@ -200,77 +213,82 @@ const App = () => {
   }
 
   return (
-    <Box sx={{ padding: "20px", maxWidth: "1200px", margin: "0 auto", backgroundColor: "#f5f5f5" }}>
-      {/* Header with welcome message and logout button */}
+    <Box
+      sx={{
+        padding: { xs: 2, sm: 3 },
+        maxWidth: { xs: "100%", sm: "1200px" },
+        margin: "0 auto",
+        backgroundColor: "#f5f5f5",
+      }}
+    >
+      {/* Header */}
       <Box
         sx={{
           display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 2,
+          mb: { xs: 3, sm: 4 },
         }}
       >
-        <Typography variant="h4" color="text.primary">
-          Monthly Expense Tracker
+        <Typography variant="h4" color="text.primary" sx={{ fontWeight: "bold" }}>
+          Bexpense
         </Typography>
-        <Box>
-          <Typography
-            variant="h6"
-            color="text.primary"
-            component="span"
-            sx={{ marginRight: 2 }}
-          >
-            {user.displayName ? `Welcome, ${user.displayName.split(" ")[0]}` : "Welcome"}
-          </Typography>
-          <Button variant="outlined" color="primary" onClick={handleLogout}>
-            Logout
-          </Button>
-        </Box>
+        <IconButton onClick={handleMenuOpen} sx={{ color: "text.primary" }}>
+          <AccountCircle fontSize="large" />
+        </IconButton>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <MenuItem disabled>
+            {user.displayName
+              ? `Welcome, ${user.displayName.split(" ")[0]}`
+              : "Welcome"}
+          </MenuItem>
+          <MenuItem onClick={handleLogout}>Logout</MenuItem>
+        </Menu>
       </Box>
 
-      {/* Display header based on selected tab */}
-      {selectedTab === 0 ? (
-        <Typography variant="h5" align="center" color="primary" sx={{ marginBottom: "20px" }}>
+      {/* Subheader for Home tab */}
+      {selectedTab === 0 && (
+        <Typography variant="h6" align="center" color="primary" sx={{ mb: 3 }}>
           Currently Viewing: {currentMonth}
-        </Typography>
-      ) : selectedTab === 1 ? (
-        <Typography variant="h5" align="center" color="primary" sx={{ marginBottom: "20px" }}>
-          Monthly Expense History
-        </Typography>
-      ) : (
-        <Typography variant="h5" align="center" color="primary" sx={{ marginBottom: "20px" }}>
-          Account Settings
         </Typography>
       )}
 
       {/* Render navigation and calendar dropdowns only when not on Account tab */}
       {selectedTab !== 2 && (
         <>
-          <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6}>
               <Button
                 onClick={() => handleMonthChange("prev")}
                 startIcon={<ArrowBack />}
                 variant="contained"
                 color="primary"
+                fullWidth
               >
                 Previous Month
               </Button>
             </Grid>
-            <Grid item xs={12} md={6} sx={{ textAlign: "right" }}>
+            <Grid item xs={12} sm={6}>
               <Button
                 onClick={() => handleMonthChange("next")}
                 endIcon={<ArrowForward />}
                 variant="contained"
                 color="primary"
+                fullWidth
               >
                 Next Month
               </Button>
             </Grid>
           </Grid>
-
-          <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
-            <Grid item xs={6} md={3}>
+          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: 2 }}>
+            <Grid item xs={6} sm={3}>
               <FormControl fullWidth>
                 <InputLabel id="month-select-label">Month</InputLabel>
                 <Select
@@ -287,7 +305,7 @@ const App = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid item xs={6} sm={3}>
               <FormControl fullWidth>
                 <InputLabel id="year-select-label">Year</InputLabel>
                 <Select
@@ -314,7 +332,7 @@ const App = () => {
         onChange={(event, newValue) => setSelectedTab(newValue)}
         indicatorColor="primary"
         textColor="primary"
-        sx={{ marginBottom: "20px" }}
+        sx={{ mb: 2 }}
       >
         <Tab label="Home" />
         <Tab label="History" />
@@ -339,7 +357,7 @@ const App = () => {
             setError={setError}
             userId={userId}
           />
-          <Card sx={{ margin: "20px 0", backgroundColor: "background.paper" }}>
+          <Card sx={{ mb: 2, backgroundColor: "background.paper" }}>
             <CardContent>
               <Typography variant="h5" gutterBottom color="text.primary">
                 Expenses for {currentMonth}
@@ -348,7 +366,8 @@ const App = () => {
                 onClick={addExpense}
                 variant="contained"
                 color="primary"
-                sx={{ marginBottom: "20px" }}
+                sx={{ mb: 2 }}
+                fullWidth
               >
                 Add Expense
               </Button>
@@ -373,18 +392,19 @@ const App = () => {
                 variant="contained"
                 color="primary"
                 disabled={loading}
-                sx={{ marginBottom: "20px" }}
+                fullWidth
+                sx={{ mb: 2 }}
               >
                 {loading ? <CircularProgress size={24} /> : "Calculate Remaining Balance"}
               </Button>
             </span>
           </Tooltip>
           {pendingExpenseChange && (
-            <Alert severity="warning" sx={{ marginBottom: "20px" }}>
+            <Alert severity="warning" sx={{ mb: 2 }}>
               Expense changes detected. Click "Calculate Remaining Balance" to update figures.
             </Alert>
           )}
-          <Card sx={{ margin: "20px 0", backgroundColor: "background.paper" }}>
+          <Card sx={{ mb: 2, backgroundColor: "background.paper" }}>
             <CardContent>
               <Typography variant="h5" gutterBottom color="text.primary">
                 Current Month Summary for {currentMonth}
@@ -400,7 +420,7 @@ const App = () => {
               <Typography color="text.primary">
                 Remaining Balance: ${remaining.toFixed(2)}
               </Typography>
-              <Box sx={{ maxWidth: 400, margin: "20px auto" }}>
+              <Box sx={{ maxWidth: { xs: "90%", sm: 400 }, mx: "auto", mt: 2 }}>
                 <Pie data={chartData} />
               </Box>
             </CardContent>
