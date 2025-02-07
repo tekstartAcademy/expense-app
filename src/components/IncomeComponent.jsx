@@ -1,3 +1,4 @@
+// components/IncomeComponent.jsx
 import React, { useState } from "react";
 import {
   Card,
@@ -14,7 +15,7 @@ import {
 import { setDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 
-const IncomeComponent = ({ income, setIncome, monthData, setMonthData, currentMonth, setError, userId }) => {
+const IncomeComponent = ({ income, setIncome, monthData, currentMonth, setError, userId }) => {
   const [open, setOpen] = useState(false);
   const [newIncome, setNewIncome] = useState(income || 0);
   const [loading, setLoading] = useState(false);
@@ -34,23 +35,20 @@ const IncomeComponent = ({ income, setIncome, monthData, setMonthData, currentMo
     }
 
     setLoading(true);
-    const existingMonthData = monthData[currentMonth] || { income: 0, bills: [], remainingBalance: 0 };
-
-    const remainingBalance =
-      updatedIncome - existingMonthData.bills.reduce((sum, bill) => sum + bill.amount, 0);
-
+    // Use monthData directly (it's already the current month's data)
+    const existingMonthData = monthData || { income: 0, bills: [] };
+    const totalBillsAmount = existingMonthData.bills
+      ? existingMonthData.bills.reduce((sum, bill) => sum + bill.amount, 0)
+      : 0;
+    const remainingBalance = updatedIncome - totalBillsAmount;
     const updatedMonthData = {
-      ...monthData,
-      [currentMonth]: {
-        ...existingMonthData,
-        income: updatedIncome,
-        remainingBalance,
-      },
+      ...existingMonthData,
+      income: updatedIncome,
+      remainingBalance,
     };
 
     try {
       await setDoc(doc(db, "users", userId, "months", currentMonth), updatedMonthData);
-      setMonthData(updatedMonthData);
       setIncome(updatedIncome);
       handleClose();
     } catch (error) {
