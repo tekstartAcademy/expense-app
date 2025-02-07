@@ -1,7 +1,7 @@
 // src/components/Register.jsx
 import React, { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { TextField, Button, Typography, Box, Paper } from "@mui/material";
+import { Box, TextField, Button, Typography, Paper, Alert } from "@mui/material";
 
 const Register = ({ setUserId, setUser, toggleAuthMode }) => {
   const [fullName, setFullName] = useState("");
@@ -18,7 +18,6 @@ const Register = ({ setUserId, setUser, toggleAuthMode }) => {
     const auth = getAuth();
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Update the user's profile with their full name
       await updateProfile(userCredential.user, { displayName: fullName });
       setUserId(userCredential.user.uid);
       setUser(userCredential.user);
@@ -30,15 +29,24 @@ const Register = ({ setUserId, setUser, toggleAuthMode }) => {
   return (
     <Box
       sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
+        background: "linear-gradient(135deg, #f5f7fa, #c3cfe2)",
         minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
         justifyContent: "center",
+        p: 2,
       }}
     >
-      <Paper sx={{ padding: 3, width: "100%", maxWidth: "400px" }}>
-        <Typography variant="h4" gutterBottom>
+      <Paper
+        sx={{
+          p: 3,
+          width: "100%",
+          maxWidth: "400px",
+          borderRadius: 2,
+          boxShadow: 3,
+        }}
+      >
+        <Typography variant="h4" gutterBottom align="center">
           Register
         </Typography>
         <TextField
@@ -47,6 +55,7 @@ const Register = ({ setUserId, setUser, toggleAuthMode }) => {
           margin="normal"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
+          sx={{ backgroundColor: "#fff", borderRadius: 1 }}
         />
         <TextField
           label="Email"
@@ -54,6 +63,7 @@ const Register = ({ setUserId, setUser, toggleAuthMode }) => {
           margin="normal"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          sx={{ backgroundColor: "#fff", borderRadius: 1 }}
         />
         <TextField
           label="Password"
@@ -62,6 +72,7 @@ const Register = ({ setUserId, setUser, toggleAuthMode }) => {
           margin="normal"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          sx={{ backgroundColor: "#fff", borderRadius: 1 }}
         />
         <TextField
           label="Confirm Password"
@@ -70,12 +81,13 @@ const Register = ({ setUserId, setUser, toggleAuthMode }) => {
           margin="normal"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          sx={{ backgroundColor: "#fff", borderRadius: 1 }}
         />
-        {error && <Typography color="error">{error}</Typography>}
+        {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
         <Button
           variant="contained"
           fullWidth
-          sx={{ mt: 2 }}
+          sx={{ mt: 2, py: 1.5 }}
           onClick={handleRegister}
         >
           Register

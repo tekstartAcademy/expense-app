@@ -1,6 +1,7 @@
 // src/components/SavingsComponent.jsx
 import React, { useState } from "react";
 import {
+  Box,
   Card,
   CardContent,
   Button,
@@ -34,17 +35,12 @@ const SavingsComponent = ({ savings, setSavings, monthData, currentMonth, setErr
       return;
     }
     setLoading(true);
-    // Get existing month data (or default values)
     const existingMonthData = monthData || { income: 0, bills: [], savings: 0 };
-    const totalExpenses = existingMonthData.bills
+    const totalBills = existingMonthData.bills
       ? existingMonthData.bills.reduce((sum, bill) => sum + bill.amount, 0)
       : 0;
-    const remainingBalance = existingMonthData.income - updatedSavings - totalExpenses;
-    const updatedMonthData = {
-      ...existingMonthData,
-      savings: updatedSavings,
-      remainingBalance,
-    };
+    const remainingBalance = existingMonthData.income - updatedSavings - totalBills;
+    const updatedMonthData = { ...existingMonthData, savings: updatedSavings, remainingBalance };
     try {
       await setDoc(doc(db, "users", userId, "months", currentMonth), updatedMonthData);
       setSavings(updatedSavings);
@@ -58,18 +54,32 @@ const SavingsComponent = ({ savings, setSavings, monthData, currentMonth, setErr
 
   return (
     <>
-      <Card sx={{ margin: "20px 0" }}>
+      <Card
+        sx={{
+          m: { xs: "10px 0", sm: "20px 0" },
+          p: { xs: "10px", sm: "20px" },
+        }}
+      >
         <CardContent>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h6" sx={{ mb: { xs: 1, sm: 2 } }}>
             Savings
           </Typography>
           {savings > 0 ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <Typography variant="h6">Current Savings: ${savings.toFixed(2)}</Typography>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ mb: { xs: 1, sm: 0 } }}>
+                Current Savings: ${savings.toFixed(2)}
+              </Typography>
               <Button onClick={handleOpen} variant="contained" color="primary" disabled={loading}>
                 {loading ? <CircularProgress size={24} /> : "Update Savings"}
               </Button>
-            </div>
+            </Box>
           ) : (
             <Button onClick={handleOpen} variant="contained" color="primary" disabled={loading}>
               {loading ? <CircularProgress size={24} /> : "Add Savings"}
@@ -77,7 +87,8 @@ const SavingsComponent = ({ savings, setSavings, monthData, currentMonth, setErr
           )}
         </CardContent>
       </Card>
-      <Dialog open={open} onClose={handleClose}>
+
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
         <DialogTitle>{savings > 0 ? "Update Savings" : "Add Savings"}</DialogTitle>
         <DialogContent>
           <TextField
@@ -88,10 +99,13 @@ const SavingsComponent = ({ savings, setSavings, monthData, currentMonth, setErr
             fullWidth
             value={newSavings}
             onChange={(e) => setNewSavings(e.target.value)}
+            sx={{ backgroundColor: "#fff", borderRadius: 1 }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+          <Button onClick={handleClose} disabled={loading}>
+            Cancel
+          </Button>
           <Button onClick={updateSavings} color="primary" disabled={loading}>
             {loading ? <CircularProgress size={24} /> : "Save"}
           </Button>

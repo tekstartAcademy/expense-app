@@ -89,7 +89,7 @@ const App = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [pendingExpenseChange, setPendingExpenseChange] = useState(false);
 
-  // For the header menu (to hide welcome/logout in a menu)
+  // For the header menu (account icon)
   const [anchorEl, setAnchorEl] = useState(null);
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
@@ -221,11 +221,11 @@ const App = () => {
         backgroundColor: "#f5f5f5",
       }}
     >
-      {/* Header */}
+      {/* Header with app name and account menu */}
       <Box
         sx={{
           display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
+          flexDirection: { xs: "row", sm: "row" },
           justifyContent: "space-between",
           alignItems: "center",
           mb: { xs: 3, sm: 4 },
@@ -245,24 +245,18 @@ const App = () => {
           transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
           <MenuItem disabled>
-            {user.displayName
-              ? `Welcome, ${user.displayName.split(" ")[0]}`
-              : "Welcome"}
+            {user.displayName ? `Welcome, ${user.displayName.split(" ")[0]}` : "Welcome"}
           </MenuItem>
           <MenuItem onClick={handleLogout}>Logout</MenuItem>
         </Menu>
       </Box>
 
-      {/* Subheader for Home tab */}
+      {/* Render calendar navigation only on Home tab */}
       {selectedTab === 0 && (
-        <Typography variant="h6" align="center" color="primary" sx={{ mb: 3 }}>
-          Currently Viewing: {currentMonth}
-        </Typography>
-      )}
-
-      {/* Render navigation and calendar dropdowns only when not on Account tab */}
-      {selectedTab !== 2 && (
         <>
+          <Typography variant="h6" align="center" color="primary" sx={{ mb: 3 }}>
+            Currently Viewing: {currentMonth}
+          </Typography>
           <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: 2 }}>
             <Grid item xs={12} sm={6}>
               <Button

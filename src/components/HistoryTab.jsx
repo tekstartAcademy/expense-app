@@ -11,34 +11,122 @@ import {
   TableBody,
   Box,
   Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 
-const HistoryTab = ({ monthsHistory }) => {
-  // Progressive loading: start by showing 10 items
-  const [visibleCount, setVisibleCount] = useState(10);
+// Helper function to parse a month id string (e.g., "February 2025") into a Date object.
+const parseMonthId = (monthId) => {
+  // Create a Date from a string like "February 2025 1" (using day 1)
+  return new Date(`${monthId} 1`);
+};
 
-  // Sort the months in descending order so the most recent appear first.
-  // (Assumes the month ID string is in a format that sorts chronologically.)
+const HistoryTab = ({ monthsHistory }) => {
+  // Progressive loading: show initially 10 items.
+  const [visibleCount, setVisibleCount] = useState(10);
+  // Filter state for period range.
+  const [filterStart, setFilterStart] = useState("");
+  const [filterEnd, setFilterEnd] = useState("");
+
+  // Sort the history in descending order (most recent first).
   const sortedHistory = monthsHistory
-    ? [...monthsHistory].sort((a, b) => b.id.localeCompare(a.id))
+    ? [...monthsHistory].sort((a, b) => parseMonthId(b.id) - parseMonthId(a.id))
     : [];
 
-  // Reset visibleCount when the history data changes
+  // For the dropdown filter options, sort the available month IDs in ascending order.
+  const filterOptions = monthsHistory
+    ? [...monthsHistory]
+        .map((item) => item.id)
+        .sort((a, b) => parseMonthId(a) - parseMonthId(b))
+    : [];
+
+  // Filter the history if both a start and an end period are selected.
+  const filteredHistory =
+    filterStart && filterEnd
+      ? sortedHistory.filter((item) => {
+          const itemDate = parseMonthId(item.id);
+          return (
+            itemDate >= parseMonthId(filterStart) &&
+            itemDate <= parseMonthId(filterEnd)
+          );
+        })
+      : sortedHistory;
+
+  // Reset visibleCount when filtered history changes.
   useEffect(() => {
     setVisibleCount(10);
-  }, [monthsHistory]);
+  }, [filteredHistory]);
 
-  const visibleHistory = sortedHistory.slice(0, visibleCount);
+  const visibleHistory = filteredHistory.slice(0, visibleCount);
 
   return (
     <Box>
       <Typography variant="h5" gutterBottom color="text.primary">
         History
       </Typography>
-      {sortedHistory && sortedHistory.length > 0 ? (
+
+      {/* Filter controls */}
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+        }}
+      >
+        <FormControl fullWidth>
+          <InputLabel id="filter-start-label">Start Period</InputLabel>
+          <Select
+            labelId="filter-start-label"
+            value={filterStart}
+            label="Start Period"
+            onChange={(e) => setFilterStart(e.target.value)}
+          >
+            <MenuItem value="">
+              <em>All</em>
+            </MenuItem>
+            {filterOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth>
+          <InputLabel id="filter-end-label">End Period</InputLabel>
+          <Select
+            labelId="filter-end-label"
+            value={filterEnd}
+            label="End Period"
+            onChange={(e) => setFilterEnd(e.target.value)}
+          >
+            <MenuItem value="">
+              <em>All</em>
+            </MenuItem>
+            {filterOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            setFilterStart("");
+            setFilterEnd("");
+          }}
+        >
+          Clear Filter
+        </Button>
+      </Box>
+
+      {filteredHistory.length > 0 ? (
         <>
           {visibleHistory.map((month) => {
-            // Calculate breakdowns for the month
+            // Calculate breakdowns for this month.
             const income = month.income || 0;
             const savings = month.savings || 0;
             const billsExpenses = month.bills
@@ -60,7 +148,7 @@ const HistoryTab = ({ monthsHistory }) => {
             return (
               <Card
                 key={month.id}
-                sx={{ marginBottom: "20px", backgroundColor: "background.paper" }}
+                sx={{ mb: 2, backgroundColor: "background.paper" }}
               >
                 <CardContent>
                   <Typography variant="h6" color="text.primary">
@@ -83,7 +171,7 @@ const HistoryTab = ({ monthsHistory }) => {
                   </Typography>
                   {month.bills && month.bills.length > 0 && (
                     <Table
-                      sx={{ backgroundColor: "background.paper", marginTop: "10px" }}
+                      sx={{ backgroundColor: "background.paper", mt: 1 }}
                     >
                       <TableHead>
                         <TableRow>
@@ -119,8 +207,8 @@ const HistoryTab = ({ monthsHistory }) => {
               </Card>
             );
           })}
-          {visibleCount < sortedHistory.length && (
-            <Box textAlign="center" sx={{ marginTop: 2 }}>
+          {visibleCount < filteredHistory.length && (
+            <Box textAlign="center" sx={{ mt: 2 }}>
               <Button
                 variant="contained"
                 onClick={() => setVisibleCount(visibleCount + 5)}
@@ -131,7 +219,9 @@ const HistoryTab = ({ monthsHistory }) => {
           )}
         </>
       ) : (
-        <Typography color="text.primary">No history available.</Typography>
+        <Typography color="text.primary">
+          No history available for the selected period.
+        </Typography>
       )}
     </Box>
   );

@@ -1,6 +1,7 @@
-// components/IncomeComponent.jsx
+// src/components/IncomeComponent.jsx
 import React, { useState } from "react";
 import {
+  Box,
   Card,
   CardContent,
   Button,
@@ -33,20 +34,13 @@ const IncomeComponent = ({ income, setIncome, monthData, currentMonth, setError,
       setError("Invalid income value. Please enter a positive number.");
       return;
     }
-
     setLoading(true);
-    // Use monthData directly (it's already the current month's data)
     const existingMonthData = monthData || { income: 0, bills: [] };
-    const totalBillsAmount = existingMonthData.bills
+    const totalBills = existingMonthData.bills
       ? existingMonthData.bills.reduce((sum, bill) => sum + bill.amount, 0)
       : 0;
-    const remainingBalance = updatedIncome - totalBillsAmount;
-    const updatedMonthData = {
-      ...existingMonthData,
-      income: updatedIncome,
-      remainingBalance,
-    };
-
+    const remainingBalance = updatedIncome - totalBills;
+    const updatedMonthData = { ...existingMonthData, income: updatedIncome, remainingBalance };
     try {
       await setDoc(doc(db, "users", userId, "months", currentMonth), updatedMonthData);
       setIncome(updatedIncome);
@@ -60,18 +54,32 @@ const IncomeComponent = ({ income, setIncome, monthData, currentMonth, setError,
 
   return (
     <>
-      <Card style={{ margin: "20px 0" }}>
+      <Card
+        sx={{
+          m: { xs: "10px 0", sm: "20px 0" },
+          p: { xs: "10px", sm: "20px" },
+        }}
+      >
         <CardContent>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h6" sx={{ mb: { xs: 1, sm: 2 } }}>
             Income
           </Typography>
           {income > 0 ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <Typography variant="h6">Current Income: ${income.toFixed(2)}</Typography>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ mb: { xs: 1, sm: 0 } }}>
+                Current Income: ${income.toFixed(2)}
+              </Typography>
               <Button onClick={handleOpen} variant="contained" color="primary" disabled={loading}>
                 {loading ? <CircularProgress size={24} /> : "Update Income"}
               </Button>
-            </div>
+            </Box>
           ) : (
             <Button onClick={handleOpen} variant="contained" color="primary" disabled={loading}>
               {loading ? <CircularProgress size={24} /> : "Add Income"}
@@ -80,7 +88,7 @@ const IncomeComponent = ({ income, setIncome, monthData, currentMonth, setError,
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
         <DialogTitle>{income > 0 ? "Update Income" : "Add Income"}</DialogTitle>
         <DialogContent>
           <TextField
@@ -91,6 +99,7 @@ const IncomeComponent = ({ income, setIncome, monthData, currentMonth, setError,
             fullWidth
             value={newIncome}
             onChange={(e) => setNewIncome(e.target.value)}
+            sx={{ backgroundColor: "#fff", borderRadius: 1 }}
           />
         </DialogContent>
         <DialogActions>
