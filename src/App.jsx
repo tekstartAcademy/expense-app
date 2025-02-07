@@ -26,6 +26,7 @@ import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from "chart.js";
 import "animate.css";
 import IncomeComponent from "./components/IncomeComponent";
+import SavingsComponent from "./components/SavingsComponent";
 import ExpenseTable from "./components/ExpenseTable";
 import HistoryTab from "./components/HistoryTab";
 import {
@@ -43,18 +44,8 @@ ChartJS.register(ArcElement, ChartTooltip, Legend);
 const App = () => {
   // Define a list of months and a range of years
   const monthsArray = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
   ];
   const currentYearNum = new Date().getFullYear();
   const yearsArray = Array.from({ length: 21 }, (_, i) => currentYearNum - 10 + i);
@@ -72,12 +63,13 @@ const App = () => {
   const currentMonth = `${selectedMonth} ${selectedYear}`;
 
   const [income, setIncome] = useState(0);
+  const [savings, setSavings] = useState(0);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedTab, setSelectedTab] = useState(0); // 0: Home, 1: History
   const [pendingExpenseChange, setPendingExpenseChange] = useState(false);
-  // The initial userId is hardcoded for testing. In production, it should be null until login.
+  // The initial userId is hardcoded for testing.
   const [userId, setUserId] = useState("JtyyGgCQLcOBFXDXnxxI4Bv9Wl23");
 
   // Load month history and current month data from Firebase
@@ -88,8 +80,8 @@ const App = () => {
   useEffect(() => {
     if (monthData) {
       setIncome(monthData.income || 0);
+      setSavings(monthData.savings || 0);
       setBills(monthData.bills || []);
-      // Reset the pending flag since we just loaded the saved data.
       setPendingExpenseChange(false);
     }
   }, [monthData]);
@@ -109,24 +101,31 @@ const App = () => {
     return <Login setUserId={setUserId} />;
   }
 
+  // Calculate totals based on expense categories
+  const totalBillsExpenses = bills
+    .filter(exp => exp.category === "Bills")
+    .reduce((sum, exp) => sum + exp.amount, 0);
+  const totalOtherExpenses = bills
+    .filter(exp => exp.category === "Other")
+    .reduce((sum, exp) => sum + exp.amount, 0);
+  const totalExpenses = totalBillsExpenses + totalOtherExpenses;
+  const remaining = income - savings - totalExpenses;
+
   // Save (or update) the current month's data in Firebase
   const saveMonthData = async () => {
     if (!validateBills(bills)) {
-      setError("Invalid bill entries. Ensure all bills have a name and a positive amount.");
+      setError("Invalid expense entries. Ensure all expenses have a name, category, and a positive amount.");
       return;
     }
-
     setLoading(true);
-
     const updatedMonthData = {
-      income: income,
-      bills: bills,
-      remainingBalance: income - bills.reduce((sum, bill) => sum + bill.amount, 0),
+      income,
+      savings,
+      bills,
+      remainingBalance: remaining,
     };
-
     try {
       await setDoc(doc(db, "users", userId, "months", currentMonth), updatedMonthData);
-      // Clear the pending expense change flag since we have recalculated.
       setPendingExpenseChange(false);
     } catch (error) {
       setError("Error saving data. Please try again.");
@@ -151,7 +150,7 @@ const App = () => {
   };
 
   const addExpense = () => {
-    setBills([...bills, { name: "", amount: 0 }]);
+    setBills([...bills, { name: "", amount: 0, category: "Bills" }]);
     setPendingExpenseChange(true);
   };
 
@@ -162,23 +161,13 @@ const App = () => {
     setPendingExpenseChange(true);
   };
 
-  // Calculate remaining balance (either from monthData or compute on the fly)
-  const remainingBalance =
-    monthData && monthData.remainingBalance !== undefined
-      ? monthData.remainingBalance
-      : income - bills.reduce((sum, bill) => sum + bill.amount, 0);
-
-  // Chart data for current month
+  // Chart data for current month – showing Savings, Bills, Other, and Remaining
   const chartData = {
-    labels: ["Income", "Expenses", "Remaining Balance"],
+    labels: ["Savings", "Bills", "Other", "Remaining"],
     datasets: [
       {
-        data: [
-          income,
-          bills.reduce((sum, bill) => sum + bill.amount, 0),
-          remainingBalance,
-        ],
-        backgroundColor: ["#4CAF50", "#FF5252", "#2196F3"],
+        data: [savings, totalBillsExpenses, totalOtherExpenses, remaining],
+        backgroundColor: ["#FFB74D", "#4CAF50", "#FF5252", "#2196F3"],
       },
     ],
   };
@@ -282,6 +271,14 @@ const App = () => {
             setError={setError}
             userId={userId}
           />
+          <SavingsComponent
+            savings={savings}
+            setSavings={setSavings}
+            monthData={monthData}
+            currentMonth={currentMonth}
+            setError={setError}
+            userId={userId}
+          />
 
           <Card sx={{ margin: "20px 0", backgroundColor: "background.paper" }}>
             <CardContent>
@@ -339,11 +336,15 @@ const App = () => {
                 Current Month Summary for {currentMonth}
               </Typography>
               <Typography color="text.primary">Income: ${income.toFixed(2)}</Typography>
+              <Typography color="text.primary">Savings: ${savings.toFixed(2)}</Typography>
               <Typography color="text.primary">
-                Total Expenses: ${bills.reduce((sum, bill) => sum + bill.amount, 0).toFixed(2)}
+                Bills Expenses: ${totalBillsExpenses.toFixed(2)}
               </Typography>
               <Typography color="text.primary">
-                Remaining Balance: ${remainingBalance.toFixed(2)}
+                Other Expenses: ${totalOtherExpenses.toFixed(2)}
+              </Typography>
+              <Typography color="text.primary">
+                Remaining Balance: ${remaining.toFixed(2)}
               </Typography>
               <Box sx={{ maxWidth: 400, margin: "20px auto" }}>
                 <Pie data={chartData} />

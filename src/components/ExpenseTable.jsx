@@ -1,3 +1,4 @@
+// src/components/ExpenseTable.jsx
 import React from "react";
 import {
   Table,
@@ -7,6 +8,9 @@ import {
   TableRow,
   TextField,
   IconButton,
+  FormControl,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 
@@ -15,7 +19,8 @@ const ExpenseTable = ({ bills, handleBillChange, deleteExpense }) => {
     <Table>
       <TableHead>
         <TableRow>
-          <TableCell>Bill</TableCell>
+          <TableCell>Expense Name</TableCell>
+          <TableCell>Category</TableCell>
           <TableCell>Amount</TableCell>
           <TableCell>Action</TableCell>
         </TableRow>
@@ -27,9 +32,22 @@ const ExpenseTable = ({ bills, handleBillChange, deleteExpense }) => {
               <TextField
                 value={bill.name}
                 onChange={(e) => handleBillChange(index, "name", e.target.value)}
-                placeholder="Bill Name"
+                placeholder="Expense Name"
                 fullWidth
               />
+            </TableCell>
+            <TableCell>
+              <FormControl fullWidth>
+                <Select
+                  value={bill.category || "Bills"}
+                  onChange={(e) =>
+                    handleBillChange(index, "category", e.target.value)
+                  }
+                >
+                  <MenuItem value="Bills">Bills</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
             </TableCell>
             <TableCell>
               <TextField
