@@ -1,5 +1,5 @@
 // src/components/HistoryTab.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -10,18 +10,34 @@ import {
   TableCell,
   TableBody,
   Box,
+  Button,
 } from "@mui/material";
 
 const HistoryTab = ({ monthsHistory }) => {
+  // Progressive loading: start by showing 10 items
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  // Sort the months in descending order so the most recent appear first.
+  // (Assumes the month ID string is in a format that sorts chronologically.)
+  const sortedHistory = monthsHistory
+    ? [...monthsHistory].sort((a, b) => b.id.localeCompare(a.id))
+    : [];
+
+  // Reset visibleCount when the history data changes
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [monthsHistory]);
+
+  const visibleHistory = sortedHistory.slice(0, visibleCount);
+
   return (
     <Box>
       <Typography variant="h5" gutterBottom color="text.primary">
         History
       </Typography>
-      {monthsHistory && monthsHistory.length > 0 ? (
-        monthsHistory
-          .sort((a, b) => a.id.localeCompare(b.id))
-          .map((month) => {
+      {sortedHistory && sortedHistory.length > 0 ? (
+        <>
+          {visibleHistory.map((month) => {
             // Calculate breakdowns for the month
             const income = month.income || 0;
             const savings = month.savings || 0;
@@ -102,7 +118,18 @@ const HistoryTab = ({ monthsHistory }) => {
                 </CardContent>
               </Card>
             );
-          })
+          })}
+          {visibleCount < sortedHistory.length && (
+            <Box textAlign="center" sx={{ marginTop: 2 }}>
+              <Button
+                variant="contained"
+                onClick={() => setVisibleCount(visibleCount + 5)}
+              >
+                Load More
+              </Button>
+            </Box>
+          )}
+        </>
       ) : (
         <Typography color="text.primary">No history available.</Typography>
       )}

@@ -1,109 +1,143 @@
+// src/components/Login.jsx
 import React, { useState } from "react";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { TextField, Button, Typography, Box, Container, CssBaseline, Paper } from "@mui/material";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  sendPasswordResetEmail 
+} from "firebase/auth";
+import { 
+  TextField, 
+  Button, 
+  Typography, 
+  Box, 
+  Paper, 
+  Alert 
+} from "@mui/material";
+import { FcGoogle } from "react-icons/fc";
 
-// Create a light theme
-const lightTheme = createTheme({
-  palette: {
-    mode: "light",
-    primary: {
-      main: "#1976d2", // Classic blue for primary color
-    },
-    background: {
-      default: "#f5f5f5", // Light gray background
-      paper: "#ffffff", // White for paper
-    },
-    text: {
-      primary: "#333333", // Dark gray for text
-      secondary: "#666666", // Lighter gray for secondary text
-    },
-  },
-});
-
-const Login = ({ setUserId }) => {
+const Login = ({ setUserId, setUser, toggleAuthMode }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const handleLogin = async () => {
+    const auth = getAuth();
     try {
-      const auth = getAuth();
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setUserId(userCredential.user.uid); // Set the authenticated user's ID
+      setUserId(userCredential.user.uid);
+      setUser(userCredential.user);
     } catch (error) {
       setError("Invalid email or password. Please try again.");
     }
   };
 
+  const handleGoogleLogin = async () => {
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
+    try {
+      const userCredential = await signInWithPopup(auth, provider);
+      setUserId(userCredential.user.uid);
+      setUser(userCredential.user);
+    } catch (error) {
+      setError("Google sign in failed. Please try again.");
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const auth = getAuth();
+    if (!email) {
+      setError("Please enter your email to reset your password.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setMessage("Password reset email sent.");
+      setError("");
+    } catch (error) {
+      setError("Error sending password reset email. Please try again.");
+    }
+  };
+
   return (
-    <ThemeProvider theme={lightTheme}>
-      <CssBaseline />
-      <Box
+    <Box
+      sx={{
+        background: "linear-gradient(135deg, #f5f7fa, #c3cfe2)",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        p: 2,
+      }}
+    >
+      <Paper
         sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh", // Cover the entire screen height
-          backgroundColor: "background.default", // Light gray background
-          padding: 2, // Add padding for smaller screens
+          padding: 4,
+          width: "100%",
+          maxWidth: "400px",
+          borderRadius: 2,
+          boxShadow: 3,
         }}
       >
-        <Paper
-          elevation={6}
-          sx={{
-            padding: { xs: 3, sm: 4, md: 5 }, // Responsive padding
-            width: "100%",
-            maxWidth: "450px", // Wider form for better readability
-            borderRadius: "12px", // Rounded corners
-            textAlign: "center",
-          }}
+        <Typography variant="h4" gutterBottom align="center">
+          Welcome Back
+        </Typography>
+        <TextField
+          label="Email"
+          fullWidth
+          margin="normal"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          sx={{ backgroundColor: "#fff", borderRadius: 1 }}
+        />
+        <TextField
+          label="Password"
+          type="password"
+          fullWidth
+          margin="normal"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          sx={{ backgroundColor: "#fff", borderRadius: 1 }}
+        />
+        {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
+        {message && <Alert severity="success" sx={{ mt: 1 }}>{message}</Alert>}
+        <Button
+          variant="contained"
+          fullWidth
+          sx={{ mt: 2, py: 1.5 }}
+          onClick={handleLogin}
         >
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", color: "text.primary" }}>
-            Welcome Back
-          </Typography>
-          <Typography variant="subtitle1" sx={{ mb: 3, color: "text.secondary" }}>
-            Sign in to continue
-          </Typography>
-          <TextField
-            label="Email"
-            fullWidth
-            margin="normal"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Password"
-            type="password"
-            fullWidth
-            margin="normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            sx={{ mb: 3 }}
-          />
-          {error && (
-            <Typography color="error" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
-          )}
-          <Button
-            onClick={handleLogin}
-            variant="contained"
-            fullWidth
-            sx={{
-              py: 1.5,
-              borderRadius: "8px",
-              fontWeight: "bold",
-              fontSize: "1rem",
-              textTransform: "none", // Disable uppercase transformation
-            }}
-          >
-            Login
-          </Button>
-        </Paper>
-      </Box>
-    </ThemeProvider>
+          Login
+        </Button>
+        <Button
+          variant="outlined"
+          fullWidth
+          sx={{ mt: 2, py: 1.5, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={handleGoogleLogin}
+        >
+          <FcGoogle size={24} style={{ marginRight: 8 }} />
+          Login with Google
+        </Button>
+        <Button
+          variant="text"
+          fullWidth
+          sx={{ mt: 2 }}
+          onClick={handleResetPassword}
+        >
+          Forgot Password?
+        </Button>
+        <Button
+          variant="text"
+          fullWidth
+          sx={{ mt: 1 }}
+          onClick={() => toggleAuthMode("register")}
+        >
+          Don't have an account? Register
+        </Button>
+      </Paper>
+    </Box>
   );
 };
 

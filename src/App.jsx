@@ -1,7 +1,9 @@
-// App.jsx
+// src/App.jsx
 import React, { useState, useEffect } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import Login from "./components/Login";
+import Register from "./components/Register";
+import AccountSettings from "./components/AccountSettings";
 import { auth, db } from "./firebase/config";
 import {
   Card,
@@ -42,24 +44,33 @@ import { setDoc, doc } from "firebase/firestore";
 ChartJS.register(ArcElement, ChartTooltip, Legend);
 
 const App = () => {
-  // Define a list of months and a range of years
+  // Authentication state
+  const [user, setUser] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [authMode, setAuthMode] = useState("login"); // "login" or "register"
+
+  // States for month, income, savings, and expenses
   const monthsArray = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
   const currentYearNum = new Date().getFullYear();
   const yearsArray = Array.from({ length: 21 }, (_, i) => currentYearNum - 10 + i);
-
-  // Get the current month string (e.g., "February 2025") from the helper
   const currentMonthStr = getCurrentMonth();
   const initialMonth = currentMonthStr.split(" ")[0];
   const initialYear = currentMonthStr.split(" ")[1];
-
-  // Use separate states for month and year selection
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [selectedYear, setSelectedYear] = useState(initialYear);
-
-  // Derive the full current month string from the selections
   const currentMonth = `${selectedMonth} ${selectedYear}`;
 
   const [income, setIncome] = useState(0);
@@ -67,14 +78,27 @@ const App = () => {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [selectedTab, setSelectedTab] = useState(0); // 0: Home, 1: History
+  // Tabs: 0: Home, 1: History, 2: Account
+  const [selectedTab, setSelectedTab] = useState(0);
   const [pendingExpenseChange, setPendingExpenseChange] = useState(false);
-  // The initial userId is hardcoded for testing.
-  const [userId, setUserId] = useState("JtyyGgCQLcOBFXDXnxxI4Bv9Wl23");
 
-  // Load month history and current month data from Firebase
+  // Load month history and current month data from Firebase (only when logged in)
   const monthsHistory = useFirestoreMonthsHistory(userId);
   const monthData = useFirestoreData(currentMonth, userId);
+
+  // Listen for authentication state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setUserId(currentUser.uid);
+      } else {
+        setUser(null);
+        setUserId(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Update local state when monthData changes
   useEffect(() => {
@@ -86,32 +110,26 @@ const App = () => {
     }
   }, [monthData]);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-      } else {
-        setUserId(null);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      setError("Error signing out. Please try again.");
+    }
+  };
 
-  if (!userId) {
-    return <Login setUserId={setUserId} />;
-  }
-
-  // Calculate totals based on expense categories
+  // Calculate expense breakdowns
   const totalBillsExpenses = bills
-    .filter(exp => exp.category === "Bills")
+    .filter((exp) => exp.category === "Bills")
     .reduce((sum, exp) => sum + exp.amount, 0);
   const totalOtherExpenses = bills
-    .filter(exp => exp.category === "Other")
+    .filter((exp) => exp.category === "Other")
     .reduce((sum, exp) => sum + exp.amount, 0);
   const totalExpenses = totalBillsExpenses + totalOtherExpenses;
   const remaining = income - savings - totalExpenses;
 
-  // Save (or update) the current month's data in Firebase
+  // Save (or update) month data in Firebase
   const saveMonthData = async () => {
     if (!validateBills(bills)) {
       setError("Invalid expense entries. Ensure all expenses have a name, category, and a positive amount.");
@@ -134,7 +152,7 @@ const App = () => {
     }
   };
 
-  // Navigation buttons update the dropdown selections as well.
+  // Navigation and expense handling functions
   const handleMonthChange = (direction) => {
     const newMonthStr =
       direction === "prev" ? getPreviousMonth(currentMonth) : getNextMonth(currentMonth);
@@ -161,7 +179,7 @@ const App = () => {
     setPendingExpenseChange(true);
   };
 
-  // Chart data for current month – showing Savings, Bills, Other, and Remaining
+  // Chart data for the current month
   const chartData = {
     labels: ["Savings", "Bills", "Other", "Remaining"],
     datasets: [
@@ -172,84 +190,125 @@ const App = () => {
     ],
   };
 
+  // If not authenticated, show the login/register screen
+  if (!user) {
+    return authMode === "login" ? (
+      <Login setUserId={setUserId} setUser={setUser} toggleAuthMode={setAuthMode} />
+    ) : (
+      <Register setUserId={setUserId} setUser={setUser} toggleAuthMode={setAuthMode} />
+    );
+  }
+
   return (
     <Box sx={{ padding: "20px", maxWidth: "1200px", margin: "0 auto", backgroundColor: "#f5f5f5" }}>
-      <Typography variant="h3" gutterBottom align="center" color="text.primary">
-        Monthly Expense Tracker
-      </Typography>
-      {/* Display a header based on the selected tab */}
+      {/* Header with welcome message and logout button */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 2,
+        }}
+      >
+        <Typography variant="h4" color="text.primary">
+          Monthly Expense Tracker
+        </Typography>
+        <Box>
+          <Typography
+            variant="h6"
+            color="text.primary"
+            component="span"
+            sx={{ marginRight: 2 }}
+          >
+            {user.displayName ? `Welcome, ${user.displayName.split(" ")[0]}` : "Welcome"}
+          </Typography>
+          <Button variant="outlined" color="primary" onClick={handleLogout}>
+            Logout
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Display header based on selected tab */}
       {selectedTab === 0 ? (
         <Typography variant="h5" align="center" color="primary" sx={{ marginBottom: "20px" }}>
           Currently Viewing: {currentMonth}
         </Typography>
-      ) : (
+      ) : selectedTab === 1 ? (
         <Typography variant="h5" align="center" color="primary" sx={{ marginBottom: "20px" }}>
           Monthly Expense History
         </Typography>
+      ) : (
+        <Typography variant="h5" align="center" color="primary" sx={{ marginBottom: "20px" }}>
+          Account Settings
+        </Typography>
       )}
 
-      {/* Navigation buttons */}
-      <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
-        <Grid item xs={12} md={6}>
-          <Button
-            onClick={() => handleMonthChange("prev")}
-            startIcon={<ArrowBack />}
-            variant="contained"
-            color="primary"
-          >
-            Previous Month
-          </Button>
-        </Grid>
-        <Grid item xs={12} md={6} sx={{ textAlign: "right" }}>
-          <Button
-            onClick={() => handleMonthChange("next")}
-            endIcon={<ArrowForward />}
-            variant="contained"
-            color="primary"
-          >
-            Next Month
-          </Button>
-        </Grid>
-      </Grid>
+      {/* Render navigation and calendar dropdowns only when not on Account tab */}
+      {selectedTab !== 2 && (
+        <>
+          <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
+            <Grid item xs={12} md={6}>
+              <Button
+                onClick={() => handleMonthChange("prev")}
+                startIcon={<ArrowBack />}
+                variant="contained"
+                color="primary"
+              >
+                Previous Month
+              </Button>
+            </Grid>
+            <Grid item xs={12} md={6} sx={{ textAlign: "right" }}>
+              <Button
+                onClick={() => handleMonthChange("next")}
+                endIcon={<ArrowForward />}
+                variant="contained"
+                color="primary"
+              >
+                Next Month
+              </Button>
+            </Grid>
+          </Grid>
 
-      {/* Dropdown selectors for month and year */}
-      <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
-        <Grid item xs={6} md={3}>
-          <FormControl fullWidth>
-            <InputLabel id="month-select-label">Month</InputLabel>
-            <Select
-              labelId="month-select-label"
-              value={selectedMonth}
-              label="Month"
-              onChange={(e) => setSelectedMonth(e.target.value)}
-            >
-              {monthsArray.map((month) => (
-                <MenuItem key={month} value={month}>
-                  {month}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <FormControl fullWidth>
-            <InputLabel id="year-select-label">Year</InputLabel>
-            <Select
-              labelId="year-select-label"
-              value={selectedYear}
-              label="Year"
-              onChange={(e) => setSelectedYear(e.target.value)}
-            >
-              {yearsArray.map((year) => (
-                <MenuItem key={year} value={year}>
-                  {year}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
+          <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
+            <Grid item xs={6} md={3}>
+              <FormControl fullWidth>
+                <InputLabel id="month-select-label">Month</InputLabel>
+                <Select
+                  labelId="month-select-label"
+                  value={selectedMonth}
+                  label="Month"
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                >
+                  {monthsArray.map((month) => (
+                    <MenuItem key={month} value={month}>
+                      {month}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <FormControl fullWidth>
+                <InputLabel id="year-select-label">Year</InputLabel>
+                <Select
+                  labelId="year-select-label"
+                  value={selectedYear}
+                  label="Year"
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                >
+                  {yearsArray.map((year) => (
+                    <MenuItem key={year} value={year}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </>
+      )}
 
+      {/* Tabs for Home, History, and Account */}
       <Tabs
         value={selectedTab}
         onChange={(event, newValue) => setSelectedTab(newValue)}
@@ -259,6 +318,7 @@ const App = () => {
       >
         <Tab label="Home" />
         <Tab label="History" />
+        <Tab label="Account" />
       </Tabs>
 
       {selectedTab === 0 && (
@@ -279,7 +339,6 @@ const App = () => {
             setError={setError}
             userId={userId}
           />
-
           <Card sx={{ margin: "20px 0", backgroundColor: "background.paper" }}>
             <CardContent>
               <Typography variant="h5" gutterBottom color="text.primary">
@@ -300,8 +359,6 @@ const App = () => {
               />
             </CardContent>
           </Card>
-
-          {/* Tooltip wraps the calculate button */}
           <Tooltip
             title={
               pendingExpenseChange
@@ -322,14 +379,11 @@ const App = () => {
               </Button>
             </span>
           </Tooltip>
-
-          {/* Display an alert if there are pending expense changes */}
           {pendingExpenseChange && (
             <Alert severity="warning" sx={{ marginBottom: "20px" }}>
               Expense changes detected. Click "Calculate Remaining Balance" to update figures.
             </Alert>
           )}
-
           <Card sx={{ margin: "20px 0", backgroundColor: "background.paper" }}>
             <CardContent>
               <Typography variant="h5" gutterBottom color="text.primary">
@@ -355,6 +409,10 @@ const App = () => {
       )}
 
       {selectedTab === 1 && <HistoryTab monthsHistory={monthsHistory} />}
+
+      {selectedTab === 2 && (
+        <AccountSettings user={user} setUser={setUser} setError={setError} />
+      )}
 
       <Snackbar
         open={!!error}
